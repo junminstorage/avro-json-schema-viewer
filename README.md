@@ -1,5 +1,7 @@
 # avro-json-schema-viewer
 
-Apache Avro Json schmea tree viewer
+Apache Avro Json scheme tree viewer
+
+
 
 
