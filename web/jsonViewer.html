@@ -1,0 +1,303 @@
+<!doctype HTML>
+<html ng-app>
+<head>
+	<title>jQuery json-schema-viewer</title>
+	<meta charset="utf-8" />
+	 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.6/angular.min.js"></script>
+	<script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+	<script src="http://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+	<script src="./js/data.js"></script>
+	<link rel="stylesheet" href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+<style type="text/css">
+body {
+	margin: 0 100px;
+	font-family: sans-serif;
+}
+
+div.container {width:900px}
+textarea.json-input {
+	width: 100%;
+	height: 400px;
+}
+
+pre.tree {
+  width: 80%;
+  border: 1px solid #aaa;
+  padding: 0.5em 1.5em;
+  height: 600px;
+  overflow: auto;
+}
+
+.alignleft {
+	float: left;
+}
+.alignright {
+	float: right;
+}
+
+label {font-weight:bold}
+
+span.toggle {font-weight:bold; color: red; cursor: pointer}
+
+label {
+    display: inline-block;
+    width: 5em;
+}
+
+ .ui-tooltip, .arrow:after {
+    background: orange;
+    border: 0px;
+ }
+.ui-tooltip {
+	width: 580px;
+	border-width: 0px;
+	white-space:nowrap;
+    padding: 5px 5px;
+    color: white;
+    border-radius: 0px;
+    font: normal 10px "Helvetica Neue", Sans-Serif;
+  }
+  
+span.level0 {font-weight:bold}  
+</style>
+
+<script>
+$(function() {
+	$( document ).tooltip();
+	
+	 $(".auto").autocomplete({
+	        source: bbds_schema_list
+	 });
+	        
+	$('.btn-json-viewer').click(function() {
+		var schemaStr = $(this).parent().find('textarea.json-input').val();
+		generateTreeView(schemaStr, $($(this).parent().find('pre.tree')[0]));
+	});
+	
+	// Display JSON sample on load
+	$('.btn-json-viewer').click();
+	
+	$('pre.tree').on('click', 'span.field', function(e){
+		console.log($(this).attr('title'));
+		if($(this).css("color") != "rgb(255, 0, 0)")	
+			$(this).css("color", "red");
+		else
+			$(this).css("color", "black");
+		alert('json path for this field is: ' + $(this).attr('data-path'));
+	});
+	
+	$('span.toggle').on('click', function(e){
+		var target = $(this).parent().next("span").next("span").next("br").next("span.target");
+		if(target.is(":visible")){
+			target.hide();
+			$(this).html(' [+] ');
+		}
+		else{
+			target.show();
+			$(this).html(' [-] ');
+		}
+	});
+});
+
+
+function generateTreeView(schemaStr, element){
+	var schemaJsonArray = JSON.parse(schemaStr);
+	var schemaJsonHash = {};
+	/*
+	 * convert the list to hash keyed on name fields
+	 * meanwhile add "parent" field
+	 */
+	schemaJsonArray.forEach(function(element, index){
+		if(schemaJsonHash[element.name]){
+			var parent = schemaJsonHash[element.name]['parent'];	
+		}
+		schemaJsonHash[element.name] = element;
+		schemaJsonHash[element.name]['parent'] = parent;
+		for(var i=0, j=element.fields.length; i<j; i++){
+			var type = element.fields[i].type;
+			if(type instanceof Array){
+				type = element.fields[i].type[1];
+			}			
+			var key;
+			if(typeof type === 'string')
+				key = type;
+			else if(type.type === 'array')
+				key = type.items;
+			else if(type.type === 'map')
+				key = type.values;
+			
+			if(!schemaJsonHash[key]){
+				schemaJsonHash[key] = {};
+			}
+			schemaJsonHash[key]['parent'] = element.name;
+		}
+	});
+	//var root = schemaJsonArray[schemaJsonArray.length-1].name;	
+	var html = "";
+	for(var key in schemaJsonHash){
+		if(schemaJsonHash.hasOwnProperty(key) && !schemaJsonHash[key].parent){
+			html += generateTreeViewRec(schemaJsonHash, key, key, 0, "");
+		}
+	}
+	
+	//html = generateTreeViewRec(schemaJsonHash, root, root, 0, "");
+	console.log(html);	
+	element.html(html);
+	return html;
+}
+
+/*
+ * recursively go down record type definition to generate html tree
+ */
+function generateTreeViewRec(schemaJsonHash, name, type, level, path, key){
+	key = key || "";
+	var space = "";
+	for(var i=0; i<level; i++)
+		space += "----";
+	path = path + "/" + name.substr(name.lastIndexOf('.')+1);
+	var levelClass = "level"+level;
+	var record = schemaJsonHash[type];
+	/*
+	 * only toggle the non-leaf types
+	 */
+	var sign = record && record.type == 'record'? '[-]':' | ';
+	
+	html = '<span class="alignleft"><span class="toggle"> '+ sign +' </span>' + '<span class="field ' + levelClass + '" title="'+ path + '">' +  space + name + '</span></span>' + '<span class="alignright">' + type + ' ' + key + '</span><span style="clear:both"></span>' + '</br>';
+	
+	if(record && record.type == 'record'){		
+		html += '<span class="target">';
+		
+		for(var i=0, j=record.fields.length; i<j; i++){
+			var type = record.fields[i].type;
+			if(type instanceof Array){
+				type = record.fields[i].type[1];
+			}
+			
+			if(typeof type === 'string')
+				html += generateTreeViewRec(schemaJsonHash, record.fields[i].name, type, level+1, path);
+			else if(typeof type === 'object'){
+				if(type.type === 'array')
+	                html += generateTreeViewRec(schemaJsonHash, record.fields[i].name, type.items, level+1, path, type.type);	
+				else 
+					html += generateTreeViewRec(schemaJsonHash, record.fields[i].name, type.type, level+1, path);	
+			}
+			
+		}
+		
+		html += '</span>';
+	}	
+	
+	return html;
+}
+</script>
+</head>
+<body>
+
+<h1>JSON Schema Viewer</h1>
+<p style='font-size:12px'>This is a simple json schema viewer built purely on HTML5/JS. Currently it has been tested against various Apache Avro json schema. The search function is working in progress. 
+Please paste the schema below and click on json-viewer button. The UI will indent the data type based on its level and display its data type on the right. Also you can toggle 
+each data type by clicking the "+" or "-" signs on the left. 
+<div class="container">
+
+<h4 for="target-select">Search sample schema or paste schema below</h4>
+<input id="target-select" class="auto" type="text" style="width: 200px;"> </br></br>
+
+<textarea class="json-input" id="json-input">
+[{
+    "type": "record",
+    "name": "com.xyz.ds.extr.Key",
+    "fields": [
+        { "name": "familyId", "type": "string" },
+        { "name": "url", "type": "string" }
+    ]
+}, {
+    "type": "record",
+    "name": "com.xyz.ds.extr.CurrentSentence",
+    "fields": [
+        { "name": "valueLength", "type": [ "null","int"] },
+        { "name": "valueOffsetInText", "type": [ "null","int"] },
+        { "name": "text", "type": "string" }
+    ]
+}, {
+    "type": "record",
+    "name": "com.xyz.ds.extr.Duration",
+    "fields": [
+        { "name": "startDate", "type": "string" },
+        { "name": "endDate", "type": "string" }
+    ]
+}, {
+    "type": "record",
+    "name": "com.xyz.ds.extr.Transparency",
+    "fields": [
+        { "name": "c", "type": [ "null","int"],"doc": "string field" },
+        { "name": "h", "type": [ "null","int"],"doc": "string field" },
+        { "name": "len", "type": [ "null","int"],"doc": "string field" },
+        { "name": "off", "type": [ "null","int"],"doc": "string field" },
+        { "name": "r", "type": [ "null","int"],"doc": "string field" },
+        { "name": "sheet", "type": [ "null","string"],"doc": "string field" },
+        { "name": "w", "type": [ "null","int"],"doc": "string field" },
+        { "name": "x", "type": [ "null","int"],"doc": "string field" },
+        { "name": "xpath", "type": [ "null","string"],"doc": "string field" },
+        { "name": "y", "type": [ "null","int"],"doc": "string field" }
+    ]
+}, {
+    "type": "record",
+    "name": "com.xyz.ds.extr.Target",
+    "fields": [
+        { "name": "name", "type": "string" },
+        { "name": "value", "type": "string","doc": "for target value" }
+    ]
+}, {
+    "type": "record",
+    "name": "com.xyz.ds.extr.Targets",
+    "fields": [
+        { "name": "target", "type": { "type": "array", "items": "com.xyz.ds.extr.Target"} }
+    ]
+}, {
+    "type": "record",
+    "name": "com.xyz.ds.extr.DataPoint",
+    "fields": [
+        { "name": "entityId", "type": "string","doc": "string field" },
+        { "name": "confidence", "type": [ "null","long"],"doc": "long field" },
+        { "name": "currency", "type": [ "null","string"],"doc": "string field" },
+        { "name": "currentSentence", "type": "com.xyz.ds.extr.CurrentSentence","doc": "object field" },
+        { "name": "periodRawString", "type": [ "null","string"],"doc": "string field" },
+        { "name": "period", "type": [ "null","string","com.xyz.ds.extr.Duration"],"doc": "string field" },
+        { "name": "scale", "type": [ "null","string"],"doc": "string field" },
+        { "name": "transparency", "type": "com.xyz.ds.extr.Transparency","doc": "string field" },
+        { "name": "value", "type": [ "null","string"],"doc": "string field" },
+        { "name": "targets", "type": [ "null",{ "type": "array", "items": "com.xyz.ds.extr.Targets"}],"doc": "target field" }
+    ]
+}, {
+    "type": "record",
+    "name": "com.xyz.ds.extr.ExtractionResult",
+    "fields": [
+        { "name": "engine", "type": "string" },
+        { "name": "dataPoint", "type": { "type": "array", "items": "com.xyz.ds.extr.DataPoint"},"doc": "array field" }
+    ]
+}, {
+    "type": "record",
+    "name": "com.xyz.ds.extr.Data",
+    "fields": [
+        { "name": "familyId", "type": "string" },
+        { "name": "url", "type": "string" },
+        { "name": "extractionResult", "type": { "type": "array", "items": "com.xyz.ds.extr.ExtractionResult"},"doc": "array field" }
+    ]
+}, {
+    "type": "record",
+    "name": "com.xyz.ds.extr",
+    "fields": [
+        { "name": "key", "type": "com.xyz.ds.extr.Key" },
+        { "name": "data", "type": "com.xyz.ds.extr.Data" },
+        { "name": "metadata", "type": { "type": "map", "values": "string"} },
+        { "name": "version", "type": "com.xyz.SchemaVersion" }
+    ]
+}]
+</textarea>
+<button class="btn-json-viewer" id="btn-json-viewer">json-viewer</button>
+<pre class="tree" id="json-renderer"></pre>
+    
+</div>
+
+</body>
+</html>
