@@ -7,6 +7,8 @@
 	<script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
 	<script src="http://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
 	<script src="./js/data.js"></script>
+	<script src="./js/fund.js"></script>
+	<script src="./js/swap.js"></script>
 	<link rel="stylesheet" href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
 <style type="text/css">
 body {
@@ -21,7 +23,7 @@ textarea.json-input {
 }
 
 pre.tree {
-  width: 80%;
+  width: 100%;
   border: 1px solid #aaa;
   padding: 0.5em 1.5em;
   height: 600px;
@@ -65,12 +67,19 @@ span.level0 {font-weight:bold}
 $(function() {
 	$( document ).tooltip();
 	
-	 //$(".auto").autocomplete({
-	 //       source: bbds_schema_list
-	 //});
+	 $(".auto").autocomplete({
+	        source: bbds_schema_list
+	 });
 	        
 	$('.btn-json-viewer').click(function() {
-		var schemaStr = $(this).parent().find('textarea.json-input').val();
+		var select = $(".auto").val();
+		if(select == 'com.bloomberg.ds.OpenFigiFund') 
+			schemaStr = JSON.stringify(fund)
+		else if(select == 'com.bloomberg.ds.OpenFigiSwaps')
+			schemaStr = JSON.stringify(swap)
+		else
+			schemaStr = $(this).parent().find('textarea.json-input').val();
+		$(this).parent().find('textarea.json-input').val(schemaStr);
 		generateTreeView(schemaStr, $($(this).parent().find('pre.tree')[0]));
 	});
 	
@@ -113,7 +122,7 @@ function generateTreeView(schemaStr, element){
 		}
 		schemaJsonHash[element.name] = element;
 		schemaJsonHash[element.name]['parent'] = parent;
-		for(var i=0, j=element.fields.length; i<j; i++){
+		for(var i=0, j=(element.fields?element.fields.length:0); i<j; i++){
 			var type = element.fields[i].type;
 			if(type instanceof Array){
 				type = element.fields[i].type[1];
