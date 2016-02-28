@@ -59,15 +59,19 @@ label {
   }
   
 span.level0 {font-weight:bold}  
+
+span {font-size:9pt}
+input[type="text"]{ padding: 0px 0px; font-size: 6pt; border: 1px solid; line-height: 0px; }
+input[type="number"]{ padding: 0px 0px; font-size: 6pt; border: 1px solid; line-height: 0px; }
+
+textarea:focus, input:focus{
+    outline: none;
+}
 </style>
 
 <script>
 $(function() {
 	$( document ).tooltip();
-	
-	 //$(".auto").autocomplete({
-	 //       source: bbds_schema_list
-	 //});
 	        
 	$('.btn-json-viewer').click(function() {
 		var schemaStr = $(this).parent().find('textarea.json-input').val();
@@ -115,7 +119,9 @@ function generateTreeView(schemaStr, element){
 		schemaJsonHash[element.name]['parent'] = parent;
 		for(var i=0, j=element.fields.length; i<j; i++){
 			var type = element.fields[i].type;
+			var required = true;
 			if(type instanceof Array){
+				required = false;
 				type = element.fields[i].type[1];
 			}			
 			var key;
@@ -136,7 +142,7 @@ function generateTreeView(schemaStr, element){
 	var html = "";
 	for(var key in schemaJsonHash){
 		if(schemaJsonHash.hasOwnProperty(key) && !schemaJsonHash[key].parent){
-			html += generateTreeViewRec(schemaJsonHash, key, key, 0, "");
+			html += generateTreeViewRec(schemaJsonHash, key, key, 0, "", null, true);
 		}
 	}
 	
@@ -149,7 +155,7 @@ function generateTreeView(schemaStr, element){
 /*
  * recursively go down record type definition to generate html tree
  */
-function generateTreeViewRec(schemaJsonHash, name, type, level, path, key){
+function generateTreeViewRec(schemaJsonHash, name, type, level, path, key, required){
 	key = key || "";
 	var space = "";
 	for(var i=0; i<level; i++)
@@ -161,25 +167,35 @@ function generateTreeViewRec(schemaJsonHash, name, type, level, path, key){
 	 * only toggle the non-leaf types
 	 */
 	var sign = record && record.type == 'record'? '[-]':' | ';
+	var star = required?'*':'';
 	
-	html = '<span class="alignleft"><span class="toggle"> '+ sign +' </span>' + '<span class="field ' + levelClass + '" title="'+ path + '">' +  space + name + '</span></span>' + '<span class="alignright">' + type + ' ' + key + '</span><span style="clear:both"></span>' + '</br>';
-	
+	if(record && record.type == 'record')
+		formEle = type
+	else{	
+		map = {'string':'text', 'int':'number'}
+		typeEle = map[type]||'text'
+		formEle = "<input required?'required':'' type=" + typeEle + ">"; 
+	}
+	html = '<span class="alignleft"><span class="toggle"> '+ sign +' </span>' + '<span class="field ' + levelClass + '" title="'+ path + '">' +  space + name + '</span></span>' + '<span class="alignright">' + type + formEle + star + ' ' + key + '</span><span style="clear:both"></span>' + '</br>';
+		
 	if(record && record.type == 'record'){		
 		html += '<span class="target">';
 		
 		for(var i=0, j=record.fields.length; i<j; i++){
 			var type = record.fields[i].type;
+			var required = true;
 			if(type instanceof Array){
+				required = false
 				type = record.fields[i].type[1];
 			}
 			
 			if(typeof type === 'string')
-				html += generateTreeViewRec(schemaJsonHash, record.fields[i].name, type, level+1, path);
+				html += generateTreeViewRec(schemaJsonHash, record.fields[i].name, type, level+1, path, null, required);
 			else if(typeof type === 'object'){
 				if(type.type === 'array')
-	                html += generateTreeViewRec(schemaJsonHash, record.fields[i].name, type.items, level+1, path, type.type);	
+	                html += generateTreeViewRec(schemaJsonHash, record.fields[i].name, type.items, level+1, path, type.type, required);	
 				else 
-					html += generateTreeViewRec(schemaJsonHash, record.fields[i].name, type.type, level+1, path);	
+					html += generateTreeViewRec(schemaJsonHash, record.fields[i].name, type.type, level+1, path, null, required);	
 			}
 			
 		}
@@ -193,8 +209,8 @@ function generateTreeViewRec(schemaJsonHash, name, type, level, path, key){
 </head>
 <body>
 
-<h1>JSON Schema Viewer</h1>
-<p style='font-size:12px'>This is a simple json schema viewer built purely on HTML5/JS. Currently it has been tested against various Apache Avro json schema. The search function is working in progress. 
+<h1>Avro JSON Schema Form Generator</h1>
+<p style='font-size:12px'>This is a simple json schema based form generator built purely on HTML5/JS. Currently it has been tested against various Apache Avro json schema. The search function is working in progress. 
 Please paste the schema below and click on json-viewer button. The UI will indent the data type based on its level and display its data type on the right. Also you can toggle 
 each data type by clicking the "+" or "-" signs on the left. 
 <div class="container">
