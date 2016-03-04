@@ -1,4 +1,4 @@
-var swap = [{
+var swan = [{
     "type": "record",
     "name": "com.xyz.ds.swan.Key", 
     "fields": [
