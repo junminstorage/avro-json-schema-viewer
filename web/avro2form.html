@@ -76,6 +76,19 @@ input.auto {font-size: 12pt}
 </style>
 
 <script>
+var toggle = function() {$('span.toggle').on('click', function(e){
+	var target = $(this).parent().next("span").next("span").next("br").next("span.target");
+	if(target.is(":visible")){
+		target.hide();
+		$(this).html(' [+] ');
+	}
+	else{
+		target.show();
+		$(this).html(' [-] ');
+	}
+});
+}
+
 $(function() {
 	$( document ).tooltip();
 	
@@ -95,6 +108,8 @@ $(function() {
 			schemaStr = $(this).parent().find('textarea.json-input').val();
 		$(this).parent().find('textarea.json-input').val(schemaStr)
 		generateTreeView(schemaStr, $($(this).parent().find('pre.tree')[0]));
+		
+		toggle();
 	});
 	
 	// Display JSON sample on load
@@ -109,17 +124,7 @@ $(function() {
 		alert('json path for this field is: ' + $(this).attr('data-path'));
 	});
 	
-	$('span.toggle').on('click', function(e){
-		var target = $(this).parent().next("span").next("span").next("br").next("span.target");
-		if(target.is(":visible")){
-			target.hide();
-			$(this).html(' [+] ');
-		}
-		else{
-			target.show();
-			$(this).html(' [-] ');
-		}
-	});
+
 });
 
 

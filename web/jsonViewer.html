@@ -9,6 +9,7 @@
 	<script src="./js/data.js"></script>
 	<script src="./js/fund.js"></script>
 	<script src="./js/swap.js"></script>
+	<script src="./js/extr.js"></script>
 	<link rel="stylesheet" href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
 <style type="text/css">
 body {
@@ -64,7 +65,24 @@ span.level0 {font-weight:bold}
 </style>
 
 <script>
+var toggle = function() {$('span.toggle').on('click', function(e){
+	var target = $(this).parent().next("span").next("span").next("br").next("span.target");
+	if(target.is(":visible")){
+		target.hide();
+		$(this).html(' [+] ');
+	}
+	else{
+		target.show();
+		$(this).html(' [-] ');
+	}
+});
+}
+
 $(function() {
+	
+	console.log(xyz);
+	var xyz = 123
+	
 	$( document ).tooltip();
 	
 	 $(".auto").autocomplete({
@@ -73,14 +91,17 @@ $(function() {
 	        
 	$('.btn-json-viewer').click(function() {
 		var select = $(".auto").val();
-		if(select == 'com.bloomberg.ds.OpenFigiFund') 
-			schemaStr = JSON.stringify(fund)
-		else if(select == 'com.bloomberg.ds.OpenFigiSwaps')
-			schemaStr = JSON.stringify(swap)
+		if(select == 'com.xyz.ds.fun') 
+			schemaStr = JSON.stringify(fun)
+		else if(select == 'com.xyz.ds.swan')
+			schemaStr = JSON.stringify(swan)
+		else if(select == 'com.xyz.ds.Extr')
+			schemaStr = JSON.stringify(extr)	
 		else
 			schemaStr = $(this).parent().find('textarea.json-input').val();
 		$(this).parent().find('textarea.json-input').val(schemaStr);
 		generateTreeView(schemaStr, $($(this).parent().find('pre.tree')[0]));
+		toggle();
 	});
 	
 	// Display JSON sample on load
@@ -95,17 +116,7 @@ $(function() {
 		alert('json path for this field is: ' + $(this).attr('data-path'));
 	});
 	
-	$('span.toggle').on('click', function(e){
-		var target = $(this).parent().next("span").next("span").next("br").next("span.target");
-		if(target.is(":visible")){
-			target.hide();
-			$(this).html(' [+] ');
-		}
-		else{
-			target.show();
-			$(this).html(' [-] ');
-		}
-	});
+	
 });
 
 
